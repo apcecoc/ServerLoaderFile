@@ -1,14 +1,6 @@
 # ServerLoaderFile 🌐
 
-✨ **A powerful module to manage server files directly in Telegram with style!** ✨  
-*(Animated loading: ⏳➡️✅)*
-
----
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/maurodesouza/profile-readme-generator/master/src/assets/icons/social/telegram/default.svg" width="40" height="40" alt="Telegram" />
-  <h3>Check out the action! 🚀</h3>
-</div>
+✨ **A powerful module to manage server files directly in Telegram with style!** ✨
 
 ---
 
