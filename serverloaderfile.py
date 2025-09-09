@@ -49,10 +49,11 @@ class ServerLoaderFile(loader.Module):
         "no_access_file": "🚫 Нет прав для чтения файла: {error}",
         "folder_deleted": "✅ Папка и всё её содержимое удалены.",
         "file_deleted": "✅ Файл удалён.",
-        "delete_error": "❌ Ошибка при удаления: {error}",
+        "delete_error": "❌ Ошибка при удалении: {error}",
         "no_access_delete": "🚫 Нет прав для удаления: {error}",
         "no_inline_bot": "❌ Inline-бот не активирован или не отвечает.",
-        "no_chat_id": "❌ Не удалось определить chat_id для отправки файла."
+        "no_chat_id": "❌ Не удалось определить chat_id для отправки файла.",
+        "current_dir": "🧭 Текущая директория:\n`{path}`"
     }
 
     strings_en = {
@@ -77,7 +78,8 @@ class ServerLoaderFile(loader.Module):
         "delete_error": "❌ Error deleting: {error}",
         "no_access_delete": "🚫 No permission to delete: {error}",
         "no_inline_bot": "❌ Inline bot is not activated or not responding.",
-        "no_chat_id": "❌ Failed to determine chat_id for sending file."
+        "no_chat_id": "❌ Failed to determine chat_id for sending file.",
+        "current_dir": "🧭 Current directory:\n`{path}`"
     }
 
     strings_es = {
@@ -102,7 +104,8 @@ class ServerLoaderFile(loader.Module):
         "delete_error": "❌ Error al eliminar: {error}",
         "no_access_delete": "🚫 No tienes permiso para eliminar: {error}",
         "no_inline_bot": "❌ El bot en línea no está activado o no responde.",
-        "no_chat_id": "❌ No se pudo determinar el chat_id para enviar el archivo."
+        "no_chat_id": "❌ No se pudo determinar el chat_id para enviar el archivo.",
+        "current_dir": "🧭 Directorio actual:\n`{path}`"
     }
 
     async def client_ready(self, client, db):
@@ -163,7 +166,7 @@ class ServerLoaderFile(loader.Module):
             emoji = "📁" if is_dir else "📄"
             buttons.append([{"text": f"{emoji} {item}", "callback": self._handle_item, "args": (full_path, is_dir, chat_id)}])
 
-        caption = f"🧭 Текущая директория:\n`{path}`"
+        caption = self.strings["current_dir"].format(path=path)
 
         if isinstance(call, InlineCall):
             await call.edit(caption, reply_markup=buttons)
