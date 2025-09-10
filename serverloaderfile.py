@@ -1,4 +1,4 @@
-__version__ = (1, 5, 0)
+__version__ = (1, 5, 1)
 
 #        █████  ██████   ██████ ███████  ██████  ██████   ██████ 
 #       ██   ██ ██   ██ ██      ██      ██      ██    ██ ██      
@@ -53,7 +53,11 @@ class ServerLoaderFile(loader.Module):
         "no_access_delete": "🚫 Нет прав для удаления: {error}",
         "no_inline_bot": "❌ Inline-бот не активирован или не отвечает.",
         "no_chat_id": "❌ Не удалось определить chat_id для отправки файла.",
-        "current_dir": "🧭 Текущая директория:\n`{path}`"
+        "current_dir": "🧭 Текущая директория:\n`{path}`",
+        "back_button": "⬅️ Назад",
+        "download_button": "⬇️ Загрузить",
+        "delete_button": "🗑️ Удалить",
+        "cancel_button": "⬅️ Отмена"
     }
 
     strings_en = {
@@ -79,7 +83,11 @@ class ServerLoaderFile(loader.Module):
         "no_access_delete": "🚫 No permission to delete: {error}",
         "no_inline_bot": "❌ Inline bot is not activated or not responding.",
         "no_chat_id": "❌ Failed to determine chat_id for sending file.",
-        "current_dir": "🧭 Current directory:\n`{path}`"
+        "current_dir": "🧭 Current directory:\n`{path}`",
+        "back_button": "⬅️ Back",
+        "download_button": "⬇️ Download",
+        "delete_button": "🗑️ Delete",
+        "cancel_button": "⬅️ Cancel"
     }
 
     strings_es = {
@@ -105,7 +113,11 @@ class ServerLoaderFile(loader.Module):
         "no_access_delete": "🚫 No tienes permiso para eliminar: {error}",
         "no_inline_bot": "❌ El bot en línea no está activado o no responde.",
         "no_chat_id": "❌ No se pudo determinar el chat_id para enviar el archivo.",
-        "current_dir": "🧭 Directorio actual:\n`{path}`"
+        "current_dir": "🧭 Directorio actual:\n`{path}`",
+        "back_button": "⬅️ Atrás",
+        "download_button": "⬇️ Descargar",
+        "delete_button": "🗑️ Eliminar",
+        "cancel_button": "⬅️ Cancelar"
     }
 
     async def client_ready(self, client, db):
@@ -153,13 +165,29 @@ class ServerLoaderFile(loader.Module):
             await utils.answer(message, self.strings["save_error"].format(error=str(e)))
 
     async def _render_panel(self, call: Union[Message, InlineCall], path: str, chat_id: int):
+        path = os.path.abspath(path)
+        buttons = []
+
+        # Добавляем кнопку "Назад" если мы не в корневой директории
+        if path != '/' and path != os.path.abspath('/'):
+            buttons.append([{"text": self.strings["back_button"], "callback": self._render_panel, "args": (os.path.dirname(path), chat_id)}])
+
         try:
+            if not os.path.exists(path):
+                raise OSError("Директория не существует")
             items = os.listdir(path)
         except (PermissionError, OSError) as e:
-            await call.answer(self.strings["no_access_dir"].format(error=str(e)))
+            msg = self.strings["no_access_dir"].format(error=str(e))
+            logger.error("Failed to access directory %s: %s", path, e)
+            if isinstance(call, InlineCall):
+                await call.answer(msg)
+            else:
+                await utils.answer(call, msg)
             return
 
-        buttons = []
+        # Сортируем элементы: сначала папки, потом файлы
+        items.sort(key=lambda x: (not os.path.isdir(os.path.join(path, x)), x.lower()))
+
         for item in items:
             full_path = os.path.join(path, item)
             is_dir = os.path.isdir(full_path)
@@ -168,10 +196,14 @@ class ServerLoaderFile(loader.Module):
 
         caption = self.strings["current_dir"].format(path=path)
 
-        if isinstance(call, InlineCall):
-            await call.edit(caption, reply_markup=buttons)
-        else:
-            await self.inline.form(caption, message=call, reply_markup=buttons)
+        try:
+            if isinstance(call, InlineCall):
+                await call.edit(caption, reply_markup=buttons)
+            else:
+                await self.inline.form(caption, message=call, reply_markup=buttons)
+        except Exception as e:
+            logger.exception("Error rendering panel for %s", path)
+            await call.answer(self.strings["send_error"].format(error=str(e)))
 
     async def _handle_item(self, call: InlineCall, path: str, is_dir: bool, chat_id: int):
         if is_dir:
@@ -179,10 +211,10 @@ class ServerLoaderFile(loader.Module):
         else:
             await call.edit(f"📄 Выбран файл: `{path}`\n\nЧто с ним сделать?", reply_markup=[
                 [
-                    {"text": "⬇️ Загрузить", "callback": self._download_file, "args": (path, chat_id)},
-                    {"text": "🗑️ Удалить", "callback": self._delete_file, "args": (path, chat_id)},
+                    {"text": self.strings["download_button"], "callback": self._download_file, "args": (path, chat_id)},
+                    {"text": self.strings["delete_button"], "callback": self._delete_file, "args": (path, chat_id)},
                 ],
-                [{"text": "⬅️ Отмена", "callback": self._render_panel, "args": (os.path.dirname(path), chat_id)}]
+                [{"text": self.strings["cancel_button"], "callback": self._render_panel, "args": (os.path.dirname(path), chat_id)}]
             ])
 
     async def _download_file(self, call: InlineCall, path: str, chat_id: int):
@@ -199,8 +231,25 @@ class ServerLoaderFile(loader.Module):
         except Exception as e:
             await call.answer(self.strings["send_error"].format(error=str(e)))
 
-    async def _send_as_one(self, call: InlineCall, path: str, chat_id: int):
-        await call.answer(self.strings["send_confirm"].format(filename=os.path.basename(path)))
+    async def _send_as_one(self, call: InlineCall, path: str, chat_id: int, progress_msg):
+        # Анимация во время отправки
+        animation_chars = ["⏳", "⌛", "🔄", "⚡"]
+        animation_index = 0
+        
+        async def update_animation():
+            nonlocal animation_index
+            while True:
+                await asyncio.sleep(0.5)
+                animation_index = (animation_index + 1) % len(animation_chars)
+                try:
+                    await progress_msg.edit(
+                        f"📤 Отправляю файл `{os.path.basename(path)}`...\n{animation_chars[animation_index]} Загружаю на сервера Telegram..."
+                    )
+                except:
+                    break
+
+        # Запускаем анимацию
+        animation_task = asyncio.create_task(update_animation())
 
         try:
             with open(path, 'rb') as f:
@@ -210,11 +259,17 @@ class ServerLoaderFile(loader.Module):
                     caption=os.path.basename(path),
                     force_document=True
                 )
-            await call.delete()
+            
+            # Останавливаем анимацию и удаляем сообщение о прогрессе
+            animation_task.cancel()
+            await progress_msg.delete()
+            
         except FilePartMissingError:
-            await call.answer(self.strings["send_error"].format(error="Ошибка загрузки файла"))
+            animation_task.cancel()
+            await progress_msg.edit(self.strings["send_error"].format(error="Ошибка загрузки файла"))
         except Exception as e:
-            await call.answer(self.strings["send_error"].format(error=str(e)))
+            animation_task.cancel()
+            await progress_msg.edit(self.strings["send_error"].format(error=str(e)))
 
     async def _delete_file(self, call: InlineCall, path: str, chat_id: int):
         try:
