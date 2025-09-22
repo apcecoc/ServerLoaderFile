@@ -53,11 +53,7 @@ class ServerLoaderFile(loader.Module):
         "no_access_delete": "🚫 Нет прав для удаления: {error}",
         "no_inline_bot": "❌ Inline-бот не активирован или не отвечает.",
         "no_chat_id": "❌ Не удалось определить chat_id для отправки файла.",
-        "current_dir": "🧭 Текущая директория:\n`{path}`",
-        "back_button": "⬅️ Назад",
-        "download_button": "⬇️ Загрузить",
-        "delete_button": "🗑️ Удалить",
-        "cancel_button": "⬅️ Отмена"
+        "current_dir": "🧭 Текущая директория:\n`{path}`"
     }
 
     strings_en = {
@@ -83,11 +79,7 @@ class ServerLoaderFile(loader.Module):
         "no_access_delete": "🚫 No permission to delete: {error}",
         "no_inline_bot": "❌ Inline bot is not activated or not responding.",
         "no_chat_id": "❌ Failed to determine chat_id for sending file.",
-        "current_dir": "🧭 Current directory:\n`{path}`",
-        "back_button": "⬅️ Back",
-        "download_button": "⬇️ Download",
-        "delete_button": "🗑️ Delete",
-        "cancel_button": "⬅️ Cancel"
+        "current_dir": "🧭 Current directory:\n`{path}`"
     }
 
     strings_es = {
@@ -113,11 +105,7 @@ class ServerLoaderFile(loader.Module):
         "no_access_delete": "🚫 No tienes permiso para eliminar: {error}",
         "no_inline_bot": "❌ El bot en línea no está activado o no responde.",
         "no_chat_id": "❌ No se pudo determinar el chat_id para enviar el archivo.",
-        "current_dir": "🧭 Directorio actual:\n`{path}`",
-        "back_button": "⬅️ Atrás",
-        "download_button": "⬇️ Descargar",
-        "delete_button": "🗑️ Eliminar",
-        "cancel_button": "⬅️ Cancelar"
+        "current_dir": "🧭 Directorio actual:\n`{path}`"
     }
 
     async def client_ready(self, client, db):
@@ -170,7 +158,7 @@ class ServerLoaderFile(loader.Module):
 
         # Добавляем кнопку "Назад" если мы не в корневой директории
         if path != '/' and path != os.path.abspath('/'):
-            buttons.append([{"text": self.strings["back_button"], "callback": self._render_panel, "args": (os.path.dirname(path), chat_id)}])
+            buttons.append([{"text": "⬅️ Назад", "callback": self._render_panel, "args": (os.path.dirname(path), chat_id)}])
 
         try:
             if not os.path.exists(path):
@@ -211,10 +199,10 @@ class ServerLoaderFile(loader.Module):
         else:
             await call.edit(f"📄 Выбран файл: `{path}`\n\nЧто с ним сделать?", reply_markup=[
                 [
-                    {"text": self.strings["download_button"], "callback": self._download_file, "args": (path, chat_id)},
-                    {"text": self.strings["delete_button"], "callback": self._delete_file, "args": (path, chat_id)},
+                    {"text": "⬇️ Загрузить", "callback": self._download_file, "args": (path, chat_id)},
+                    {"text": "🗑️ Удалить", "callback": self._delete_file, "args": (path, chat_id)},
                 ],
-                [{"text": self.strings["cancel_button"], "callback": self._render_panel, "args": (os.path.dirname(path), chat_id)}]
+                [{"text": "⬅️ Отмена", "callback": self._render_panel, "args": (os.path.dirname(path), chat_id)}]
             ])
 
     async def _download_file(self, call: InlineCall, path: str, chat_id: int):
